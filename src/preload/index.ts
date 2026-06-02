@@ -75,6 +75,14 @@ const api = {
     style?: string
     tweetCount?: number
   }) => ipcRenderer.invoke('sources:generate-from-transcription', options),
+  generateLongThread: (options: {
+    prompt: string
+    tweetCount?: number
+    style?: string
+    useArchive?: boolean
+    archiveQuery?: string
+    filePaths?: string[]
+  }) => ipcRenderer.invoke('sources:generate-long-thread', options),
 
   getAppVersion: () => ipcRenderer.invoke('app:version'),
   openExternal: (url: string) => ipcRenderer.invoke('app:open-external', url),

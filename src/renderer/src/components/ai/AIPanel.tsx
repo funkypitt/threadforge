@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, X, RefreshCw, Archive, FileText, Plus, Trash2, Video, Link } from 'lucide-react'
+import { Sparkles, X, RefreshCw, Archive, FileText, Plus, Trash2, Video, Link, ScrollText } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useDraftsStore } from '@/stores/draftsStore'
 
 const STYLES = ['Professional', 'Casual', 'Humorous', 'Educational', 'Provocative', 'Storytelling']
-type SourceMode = 'prompt' | 'documents' | 'archive' | 'media'
+type SourceMode = 'prompt' | 'documents' | 'archive' | 'media' | 'long'
 
 export function AIPanel(): JSX.Element {
   const [prompt, setPrompt] = useState('')
@@ -29,6 +29,12 @@ export function AIPanel(): JSX.Element {
   const [mediaFiles, setMediaFiles] = useState<string[]>([])
   const [transcribing, setTranscribing] = useState(false)
   const [transcription, setTranscription] = useState<string | null>(null)
+  const [longPrompt, setLongPrompt] = useState('')
+  const [longCount, setLongCount] = useState(100)
+  const [longUseArchive, setLongUseArchive] = useState(true)
+  const [longArchiveQuery, setLongArchiveQuery] = useState('')
+  const [longDocFiles, setLongDocFiles] = useState<string[]>([])
+  const [longProgress, setLongProgress] = useState(0)
 
   const aiPanelOpen = useUIStore((s) => s.aiPanelOpen)
   const toggleAIPanel = useUIStore((s) => s.toggleAIPanel)
@@ -110,6 +116,24 @@ export function AIPanel(): JSX.Element {
           style: style.toLowerCase(),
           tweetCount
         })
+      } else if (sourceMode === 'long') {
+        const cleanup = window.api.onAIStream((_ev: unknown, data: unknown) => {
+          const d = data as { totalGenerated?: number }
+          if (d.totalGenerated) setLongProgress(d.totalGenerated)
+        })
+        try {
+          thread = await window.api.generateLongThread({
+            prompt: longPrompt,
+            tweetCount: longCount,
+            style: style.toLowerCase(),
+            useArchive: longUseArchive,
+            archiveQuery: longArchiveQuery || undefined,
+            filePaths: longDocFiles.length > 0 ? longDocFiles : undefined
+          })
+        } finally {
+          cleanup()
+          setLongProgress(0)
+        }
       } else {
         thread = await window.api.generateThread(prompt, {
           style: style.toLowerCase(),
@@ -132,6 +156,7 @@ export function AIPanel(): JSX.Element {
     if (sourceMode === 'documents') return selectedFiles.length > 0
     if (sourceMode === 'archive') return archiveQuery.trim().length > 0
     if (sourceMode === 'media') return !!transcription
+    if (sourceMode === 'long') return longPrompt.trim().length > 0
     return false
   }
 
@@ -176,6 +201,13 @@ export function AIPanel(): JSX.Element {
           >
             <Video size={11} />
             A/V
+          </button>
+          <button
+            onClick={() => setSourceMode('long')}
+            className={`flex-1 text-xs py-1.5 rounded-md transition-colors flex items-center justify-center gap-1 ${sourceMode === 'long' ? 'bg-bg-tertiary text-text-primary' : 'text-text-muted'}`}
+          >
+            <ScrollText size={11} />
+            Epic
           </button>
         </div>
 
@@ -347,6 +379,113 @@ export function AIPanel(): JSX.Element {
           </div>
         )}
 
+        {sourceMode === 'long' && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <ScrollText size={16} className="text-accent" />
+              <span className="text-sm font-semibold">Epic Thread Builder</span>
+            </div>
+
+            <label className="text-xs text-text-muted block mb-1.5">Narrative Prompt</label>
+            <textarea
+              value={longPrompt}
+              onChange={(e) => setLongPrompt(e.target.value)}
+              placeholder='e.g. "Tell the story of the ivermectin controversy chronologically, covering the key studies, political reactions, and scientific debates..."'
+              className="w-full bg-bg-secondary border border-border rounded-lg p-3 text-sm text-text-primary resize-none outline-none focus:border-accent placeholder:text-text-muted"
+              rows={5}
+            />
+
+            <label className="text-xs text-text-muted block mb-1.5 mt-3">
+              Target tweets: {longCount}
+            </label>
+            <input
+              type="range"
+              min={20}
+              max={250}
+              step={10}
+              value={longCount}
+              onChange={(e) => setLongCount(parseInt(e.target.value))}
+              className="w-full accent-accent"
+            />
+            <div className="flex justify-between text-[10px] text-text-muted -mt-0.5 mb-3">
+              <span>20</span>
+              <span>~{Math.ceil(longCount / 15)} batches</span>
+              <span>250</span>
+            </div>
+
+            {/* Archive source toggle */}
+            <div className="flex items-center justify-between bg-bg-secondary rounded-lg px-3 py-2 mb-2">
+              <div className="flex items-center gap-2">
+                <Archive size={14} className="text-text-muted" />
+                <span className="text-xs text-text-secondary">Use X Archives</span>
+              </div>
+              <button
+                onClick={() => setLongUseArchive(!longUseArchive)}
+                className={`w-8 h-4 rounded-full transition-colors ${longUseArchive ? 'bg-accent' : 'bg-border'}`}
+              >
+                <div className={`w-3 h-3 rounded-full bg-white transition-transform mx-0.5 ${longUseArchive ? 'translate-x-4' : ''}`} />
+              </button>
+            </div>
+
+            {longUseArchive && (
+              <div className="mb-3">
+                <input
+                  type="text"
+                  value={longArchiveQuery}
+                  onChange={(e) => setLongArchiveQuery(e.target.value)}
+                  placeholder="Archive search terms (e.g. ivermectin covid)"
+                  className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-text-primary outline-none focus:border-accent placeholder:text-text-muted"
+                />
+              </div>
+            )}
+
+            {/* Document sources */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-text-muted">Additional documents</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[11px] h-5"
+                onClick={async () => {
+                  const paths = await window.api.selectSourceFiles()
+                  if (paths.length > 0) setLongDocFiles((prev) => [...prev, ...paths])
+                }}
+              >
+                <Plus size={10} className="mr-0.5" />
+                Add
+              </Button>
+            </div>
+            {longDocFiles.length > 0 && (
+              <div className="space-y-1 mb-2">
+                {longDocFiles.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-bg-secondary rounded px-2 py-1 text-xs">
+                    <FileText size={10} className="text-accent" />
+                    <span className="truncate flex-1 text-text-secondary">{f.split('/').pop()}</span>
+                    <button onClick={() => setLongDocFiles((prev) => prev.filter((_, j) => j !== i))} className="text-text-muted hover:text-danger">
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {loading && longProgress > 0 && (
+              <div className="bg-bg-secondary rounded-lg p-3 mt-2">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-accent font-medium">Generating...</span>
+                  <span className="text-text-muted">{longProgress}/{longCount} tweets</span>
+                </div>
+                <div className="w-full bg-bg-tertiary rounded-full h-1.5">
+                  <div
+                    className="bg-accent rounded-full h-1.5 transition-all"
+                    style={{ width: `${(longProgress / longCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Style selector */}
         <div>
           <label className="text-xs text-text-muted block mb-1.5">Style</label>
@@ -367,8 +506,8 @@ export function AIPanel(): JSX.Element {
           </div>
         </div>
 
-        {/* Tweet count */}
-        <div>
+        {/* Tweet count (hidden in long mode — it has its own) */}
+        {sourceMode !== 'long' && <div>
           <label className="text-xs text-text-muted block mb-1.5">Tweets: {tweetCount}</label>
           <input
             type="range"
@@ -378,7 +517,7 @@ export function AIPanel(): JSX.Element {
             onChange={(e) => setTweetCount(parseInt(e.target.value))}
             className="w-full accent-accent"
           />
-        </div>
+        </div>}
       </div>
 
       {/* Generate button */}

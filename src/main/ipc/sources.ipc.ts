@@ -305,4 +305,120 @@ ${tweetSummary.slice(0, 80000)}`
       return { ...thread, tweets }
     }
   )
+
+  ipcMain.handle(
+    'sources:generate-long-thread',
+    async (
+      event,
+      options: {
+        prompt: string
+        tweetCount?: number
+        style?: string
+        useArchive?: boolean
+        archiveQuery?: string
+        filePaths?: string[]
+      }
+    ) => {
+      if (!aiService.isInitialized()) {
+        throw new Error('Claude API not configured')
+      }
+
+      const win = BrowserWindow.fromWebContents(event.sender)
+      let sourceContent = ''
+
+      // Gather archive content
+      if (options.useArchive && options.archiveQuery) {
+        if (!archiveService.isLoaded()) {
+          archiveService.loadArchives(getArchivesDir())
+        }
+        const matchingTweets = archiveService.searchTweets(options.archiveQuery, 500)
+        if (matchingTweets.length > 0) {
+          sourceContent += `\n\nX ARCHIVE DATA (${matchingTweets.length} matching tweets, chronological):\n`
+          sourceContent += matchingTweets
+            .map((t) => {
+              const mediaNote = t.media_files.length > 0
+                ? ` [HAS MEDIA: ${t.media_files.map((f) => f.split('/').pop()).join(', ')}]`
+                : ''
+              return `[${t.created_at}] (@${t.account}) ${t.text}${mediaNote}`
+            })
+            .join('\n\n')
+        }
+      }
+
+      // Gather document content
+      if (options.filePaths && options.filePaths.length > 0) {
+        for (const filePath of options.filePaths) {
+          const doc = documentService.extractText(filePath)
+          sourceContent += `\n\n--- DOCUMENT: ${doc.fileName} ---\n${doc.text}`
+        }
+      }
+
+      const tweetContents = await aiService.generateLongThread(
+        options.prompt,
+        {
+          style: options.style || 'professional',
+          tweetCount: options.tweetCount || 100,
+          sourceContent: sourceContent || undefined
+        },
+        (progressEvent) => {
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('ai:stream', progressEvent)
+          }
+        }
+      )
+
+      // Save to database
+      const db = getDb()
+      const threadId = randomUUID()
+
+      const transaction = db.transaction(() => {
+        db.prepare(
+          'INSERT INTO threads (id, title, ai_prompt, ai_style) VALUES (?, ?, ?, ?)'
+        ).run(
+          threadId,
+          options.prompt.slice(0, 100),
+          options.prompt,
+          options.style || 'professional'
+        )
+
+        for (let i = 0; i < tweetContents.length; i++) {
+          db.prepare(
+            'INSERT INTO tweets (id, thread_id, position, content) VALUES (?, ?, ?, ?)'
+          ).run(randomUUID(), threadId, i, tweetContents[i])
+        }
+      })
+      transaction()
+
+      // Auto-suggest media from archive for matching tweets
+      if (options.useArchive && options.archiveQuery) {
+        const tweetsWithMedia = archiveService.searchTweetsWithMedia(
+          options.archiveQuery,
+          200
+        )
+        if (tweetsWithMedia.length > 0) {
+          // Store media suggestions as thread metadata
+          const mediaMap = tweetsWithMedia.flatMap((t) =>
+            t.media_files.map((f) => ({
+              archiveTweetId: t.id,
+              archiveTweetText: t.text.slice(0, 100),
+              filePath: f
+            }))
+          )
+          db.prepare(
+            'INSERT OR REPLACE INTO settings (key, value, encrypted) VALUES (?, ?, 0)'
+          ).run(
+            `thread_media_suggestions_${threadId}`,
+            JSON.stringify(mediaMap.slice(0, 100))
+          )
+        }
+      }
+
+      const thread = db.prepare('SELECT * FROM threads WHERE id = ?').get(threadId)
+      const tweets = db
+        .prepare('SELECT * FROM tweets WHERE thread_id = ? ORDER BY position')
+        .all(threadId)
+
+      return { ...thread, tweets }
+    }
+  )
 }
