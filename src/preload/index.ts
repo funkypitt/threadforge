@@ -45,6 +45,8 @@ const api = {
 
   getSettings: () => ipcRenderer.invoke('settings:get-all'),
   setSetting: (key: string, value: unknown) => ipcRenderer.invoke('settings:set', key, value),
+  isSetupComplete: () => ipcRenderer.invoke('settings:is-setup-complete'),
+  completeSetup: () => ipcRenderer.invoke('settings:complete-setup'),
   testXConnection: () => ipcRenderer.invoke('settings:test-x-connection'),
   testAIConnection: () => ipcRenderer.invoke('settings:test-ai-connection'),
 

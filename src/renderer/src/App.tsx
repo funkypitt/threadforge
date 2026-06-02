@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { ThreadEditor } from '@/components/editor/ThreadEditor'
@@ -5,10 +6,24 @@ import { AIPanel } from '@/components/ai/AIPanel'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { PostingDialog } from '@/components/posting/PostingDialog'
 import { ScheduleModal } from '@/components/schedule/ScheduleModal'
+import { SetupWizard } from '@/components/setup/SetupWizard'
 import { useUIStore } from '@/stores/uiStore'
 
 export default function App(): JSX.Element {
   const activeView = useUIStore((s) => s.activeView)
+  const [setupDone, setSetupDone] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    window.api.isSetupComplete().then(setSetupDone)
+  }, [])
+
+  if (setupDone === null) {
+    return <div className="h-screen bg-bg-primary" />
+  }
+
+  if (!setupDone) {
+    return <SetupWizard onComplete={() => setSetupDone(true)} />
+  }
 
   return (
     <div className="h-screen flex flex-col">

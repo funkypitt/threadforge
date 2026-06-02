@@ -53,6 +53,14 @@ export function registerSettingsIpc(): void {
     }
   })
 
+  ipcMain.handle('settings:is-setup-complete', () => {
+    return getSetting('setup_complete') === true
+  })
+
+  ipcMain.handle('settings:complete-setup', () => {
+    setSetting('setup_complete', true)
+  })
+
   ipcMain.handle('settings:test-x-connection', async () => {
     try {
       if (!twitterService.isInitialized()) {
