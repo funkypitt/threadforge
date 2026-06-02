@@ -138,8 +138,17 @@ ${options.transcription.slice(0, 80000)}`
   ipcMain.handle('sources:archive-status', () => {
     return {
       loaded: archiveService.isLoaded(),
-      tweetCount: archiveService.getTweetCount()
+      tweetCount: archiveService.getTweetCount(),
+      mediaCount: archiveService.getMediaCount(),
+      accounts: archiveService.getAccounts().map((a) => ({
+        username: a.username,
+        displayName: a.displayName
+      }))
     }
+  })
+
+  ipcMain.handle('sources:search-archive-media', (_event, query: string, limit?: number) => {
+    return archiveService.searchTweetsWithMedia(query, limit)
   })
 
   ipcMain.handle(

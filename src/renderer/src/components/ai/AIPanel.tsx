@@ -16,7 +16,12 @@ export function AIPanel(): JSX.Element {
   const [sourceMode, setSourceMode] = useState<SourceMode>('prompt')
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [archiveQuery, setArchiveQuery] = useState('')
-  const [archiveStatus, setArchiveStatus] = useState<{ loaded: boolean; tweetCount: number }>({
+  const [archiveStatus, setArchiveStatus] = useState<{
+    loaded: boolean
+    tweetCount: number
+    mediaCount?: number
+    accounts?: Array<{ username: string; displayName: string }>
+  }>({
     loaded: false,
     tweetCount: 0
   })
@@ -240,6 +245,26 @@ export function AIPanel(): JSX.Element {
                 </Button>
               )}
             </div>
+
+            {archiveStatus.loaded && archiveStatus.accounts && archiveStatus.accounts.length > 0 && (
+              <div className="space-y-1 mb-3">
+                {archiveStatus.accounts.map((a) => (
+                  <div key={a.username} className="flex items-center gap-2 bg-bg-secondary rounded-lg px-2.5 py-1.5 text-xs">
+                    <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center text-[10px] text-accent font-bold">
+                      @
+                    </div>
+                    <span className="text-text-secondary">{a.displayName}</span>
+                    <span className="text-text-muted">@{a.username}</span>
+                  </div>
+                ))}
+                {archiveStatus.mediaCount !== undefined && archiveStatus.mediaCount > 0 && (
+                  <p className="text-[11px] text-text-muted px-1">
+                    {archiveStatus.mediaCount.toLocaleString()} media files available
+                  </p>
+                )}
+              </div>
+            )}
+
             <textarea
               value={archiveQuery}
               onChange={(e) => setArchiveQuery(e.target.value)}
@@ -249,6 +274,7 @@ export function AIPanel(): JSX.Element {
             />
             <p className="text-[11px] text-text-muted mt-1.5">
               Searches your X archive tweets and uses matching results as context for thread generation.
+              Media from matching tweets can be reattached.
             </p>
           </div>
         )}
