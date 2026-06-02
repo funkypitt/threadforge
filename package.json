@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "description": "Local X thread composer with AI generation",
   "main": "./out/main/index.js",
-  "author": "freedomfighter",
+  "homepage": "https://github.com/funkypitt/threadforge",
+  "author": {
+    "name": "freedomfighter",
+    "email": "pierregallaz@gmail.com"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
