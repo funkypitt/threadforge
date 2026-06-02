@@ -9,7 +9,7 @@ export function registerAiIpc(): void {
     async (
       event,
       prompt: string,
-      options?: { style?: string; tweetCount?: number; systemPrompt?: string }
+      options?: { style?: string; tweetCount?: number; language?: string; systemPrompt?: string }
     ) => {
       if (!aiService.isInitialized()) {
         throw new Error('Claude API not configured')

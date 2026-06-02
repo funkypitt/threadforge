@@ -6,11 +6,13 @@ import { useUIStore } from '@/stores/uiStore'
 import { useDraftsStore } from '@/stores/draftsStore'
 
 const STYLES = ['Professional', 'Casual', 'Humorous', 'Educational', 'Provocative', 'Storytelling']
+const LANGUAGES = ['French', 'English', 'Spanish', 'German', 'Italian', 'Portuguese']
 type SourceMode = 'prompt' | 'documents' | 'archive' | 'media' | 'long'
 
 export function AIPanel(): JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [style, setStyle] = useState('Professional')
+  const [language, setLanguage] = useState('French')
   const [tweetCount, setTweetCount] = useState(7)
   const [loading, setLoading] = useState(false)
   const [sourceMode, setSourceMode] = useState<SourceMode>('prompt')
@@ -99,13 +101,13 @@ export function AIPanel(): JSX.Element {
         thread = await window.api.generateFromDocument({
           filePaths: selectedFiles,
           prompt: prompt || 'Create a compelling thread summarizing this content',
-          style: style.toLowerCase(),
+          style: style.toLowerCase(), language,
           tweetCount
         })
       } else if (sourceMode === 'archive') {
         thread = await window.api.generateFromArchive({
           query: archiveQuery,
-          style: style.toLowerCase(),
+          style: style.toLowerCase(), language,
           tweetCount
         })
       } else if (sourceMode === 'media' && transcription) {
@@ -113,7 +115,7 @@ export function AIPanel(): JSX.Element {
           transcription,
           source: youtubeUrl || mediaFiles[0] || 'media',
           prompt: prompt || 'Create a thread summarizing the key points',
-          style: style.toLowerCase(),
+          style: style.toLowerCase(), language,
           tweetCount
         })
       } else if (sourceMode === 'long') {
@@ -125,7 +127,7 @@ export function AIPanel(): JSX.Element {
           thread = await window.api.generateLongThread({
             prompt: longPrompt,
             tweetCount: longCount,
-            style: style.toLowerCase(),
+            style: style.toLowerCase(), language,
             useArchive: longUseArchive,
             archiveQuery: longArchiveQuery || undefined,
             filePaths: longDocFiles.length > 0 ? longDocFiles : undefined
@@ -136,7 +138,7 @@ export function AIPanel(): JSX.Element {
         }
       } else {
         thread = await window.api.generateThread(prompt, {
-          style: style.toLowerCase(),
+          style: style.toLowerCase(), language,
           tweetCount
         })
       }
@@ -501,6 +503,26 @@ export function AIPanel(): JSX.Element {
                 }`}
               >
                 {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Language */}
+        <div>
+          <label className="text-xs text-text-muted block mb-1.5">Language</label>
+          <div className="flex flex-wrap gap-1.5">
+            {LANGUAGES.map((l) => (
+              <button
+                key={l}
+                onClick={() => setLanguage(l)}
+                className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                  language === l
+                    ? 'border-accent text-accent bg-accent/10'
+                    : 'border-border text-text-muted hover:border-border-hover'
+                }`}
+              >
+                {l}
               </button>
             ))}
           </div>

@@ -33,6 +33,7 @@ export class AIService {
     options: {
       style?: string
       tweetCount?: number
+      language?: string
       systemPrompt?: string
     },
     onStream: (event: AIStreamEvent) => void
@@ -41,10 +42,12 @@ export class AIService {
 
     const count = options.tweetCount || 7
     const style = options.style || 'professional'
+    const language = options.language || 'French'
 
     const defaultSystem = `You are a Twitter/X thread writer. Generate a thread of ${count} tweets about the given topic.
 
 Rules:
+- WRITE ENTIRELY IN ${language.toUpperCase()}
 - Each tweet MUST be under 280 characters
 - Return tweets separated by ---TWEET_BREAK---
 - First tweet should hook the reader
@@ -102,6 +105,7 @@ Rules:
     options: {
       style?: string
       tweetCount?: number
+      language?: string
       sourceContent?: string
       systemPromptOverride?: string
     },
@@ -111,6 +115,7 @@ Rules:
 
     const targetCount = options.tweetCount || 100
     const style = options.style || 'professional'
+    const language = options.language || 'French'
     const batchSize = 15
     const allTweets: string[] = []
 
@@ -130,6 +135,7 @@ Rules:
       const systemPrompt = options.systemPromptOverride || `You are a Twitter/X thread writer creating an epic long-form thread.
 
 ABSOLUTE RULES — violations are unacceptable:
+- WRITE ENTIRELY IN ${language.toUpperCase()}
 - Every single tweet MUST be STRICTLY UNDER 280 characters. Count carefully. This is a hard technical limit.
 - Return tweets separated by ---TWEET_BREAK---
 - Do NOT include tweet numbers, "Thread:", or any meta-text
@@ -229,10 +235,12 @@ NARRATIVE GUIDELINES:
   async regenerateSingleTweet(
     threadContent: string[],
     tweetIndex: number,
-    style: string
+    style: string,
+    language?: string
   ): Promise<string> {
     if (!this.client) throw new Error('AI client not initialized')
 
+    const lang = language || 'French'
     const context = threadContent
       .map((t, i) => (i === tweetIndex ? '[REGENERATE THIS TWEET]' : t))
       .join('\n---\n')
@@ -240,7 +248,7 @@ NARRATIVE GUIDELINES:
     const response = await this.client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 512,
-      system: `You are rewriting one tweet in a thread. Keep the same topic and flow. Style: ${style}. Return ONLY the new tweet text, nothing else. Must be under 280 characters.`,
+      system: `You are rewriting one tweet in a thread. Write in ${lang}. Keep the same topic and flow. Style: ${style}. Return ONLY the new tweet text, nothing else. Must be under 280 characters.`,
       messages: [
         {
           role: 'user',

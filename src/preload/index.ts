@@ -34,7 +34,7 @@ const api = {
 
   generateThread: (
     prompt: string,
-    options?: { style?: string; tweetCount?: number; systemPrompt?: string }
+    options?: { style?: string; tweetCount?: number; language?: string; systemPrompt?: string }
   ) => ipcRenderer.invoke('ai:generate-thread', prompt, options),
   regenerateTweet: (tweetId: string, context: { threadContent: string[]; tweetIndex: number }) =>
     ipcRenderer.invoke('ai:regenerate-tweet', tweetId, context),
@@ -79,6 +79,7 @@ const api = {
     prompt: string
     tweetCount?: number
     style?: string
+    language?: string
     useArchive?: boolean
     archiveQuery?: string
     filePaths?: string[]

@@ -64,6 +64,7 @@ export function registerSourcesIpc(): void {
         source: string
         prompt: string
         style?: string
+        language?: string
         tweetCount?: number
       }
     ) => {
@@ -73,10 +74,12 @@ export function registerSourcesIpc(): void {
 
       const count = options.tweetCount || 7
       const style = options.style || 'professional'
+      const language = options.language || 'French'
 
       const systemPrompt = `You are a Twitter/X thread writer. Based on the transcription below, create a thread of ${count} tweets.
 
 Rules:
+- WRITE ENTIRELY IN ${language.toUpperCase()}
 - Each tweet MUST be under 280 characters
 - Return tweets separated by ---TWEET_BREAK---
 - Use a ${style} tone
@@ -92,7 +95,7 @@ ${options.transcription.slice(0, 80000)}`
 
       const tweetContents = await aiService.generateThread(
         options.prompt,
-        { style, tweetCount: count, systemPrompt },
+        { style, language, tweetCount: count, systemPrompt },
         (streamEvent) => {
           if (win && !win.isDestroyed()) {
             win.webContents.send('ai:stream', streamEvent)
@@ -159,6 +162,7 @@ ${options.transcription.slice(0, 80000)}`
         filePaths: string[]
         prompt: string
         style?: string
+        language?: string
         tweetCount?: number
       }
     ) => {
@@ -174,10 +178,12 @@ ${options.transcription.slice(0, 80000)}`
 
       const count = options.tweetCount || 7
       const style = options.style || 'professional'
+      const language = options.language || 'French'
 
       const systemPrompt = `You are a Twitter/X thread writer. Based on the source document(s) below, create a thread of ${count} tweets.
 
 Rules:
+- WRITE ENTIRELY IN ${language.toUpperCase()}
 - Each tweet MUST be under 280 characters
 - Return tweets separated by ---TWEET_BREAK---
 - Use a ${style} tone
@@ -232,6 +238,7 @@ ${sourceContent.slice(0, 80000)}`
       options: {
         query: string
         style?: string
+        language?: string
         tweetCount?: number
       }
     ) => {
@@ -254,10 +261,12 @@ ${sourceContent.slice(0, 80000)}`
 
       const count = options.tweetCount || 7
       const style = options.style || 'professional'
+      const language = options.language || 'French'
 
       const systemPrompt = `You are a Twitter/X thread writer. Based on the user's tweet archive data below, create a thread of ${count} tweets.
 
 Rules:
+- WRITE ENTIRELY IN ${language.toUpperCase()}
 - Each tweet MUST be under 280 characters
 - Return tweets separated by ---TWEET_BREAK---
 - Synthesize and summarize the archive content chronologically where applicable
@@ -273,7 +282,7 @@ ${tweetSummary.slice(0, 80000)}`
 
       const tweetContents = await aiService.generateThread(
         `Create a thread about: ${options.query}`,
-        { style, tweetCount: count, systemPrompt },
+        { style, language, tweetCount: count, systemPrompt },
         (streamEvent) => {
           if (win && !win.isDestroyed()) {
             win.webContents.send('ai:stream', streamEvent)
@@ -314,6 +323,7 @@ ${tweetSummary.slice(0, 80000)}`
         prompt: string
         tweetCount?: number
         style?: string
+        language?: string
         useArchive?: boolean
         archiveQuery?: string
         filePaths?: string[]
@@ -357,6 +367,7 @@ ${tweetSummary.slice(0, 80000)}`
         options.prompt,
         {
           style: options.style || 'professional',
+          language: options.language || 'French',
           tweetCount: options.tweetCount || 100,
           sourceContent: sourceContent || undefined
         },
